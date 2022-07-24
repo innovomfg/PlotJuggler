@@ -17,7 +17,11 @@ jobs:
       with:
         submodules: true
     - name: build
-      run: ./build.sh
+      run: |
+        ls -la
+        pwd
+        ls $GITHUB_WORKSPACE
+        ./build.sh
     - name: zip plugins
       run: eval "$ZIP"
     - name: upload
