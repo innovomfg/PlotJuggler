@@ -69,6 +69,7 @@ bool DataLoadRlog::readDataFromFile(FileLoadInfo* fileload_info, PlotDataMapRef&
     raw = read_raw_file(fn);
     if (raw.size() == 0) {
       qDebug() << "Raw file read failed, larger than 2GB?";
+      assert(false);
     }
   }
 
