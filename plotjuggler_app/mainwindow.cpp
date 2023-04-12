@@ -1473,7 +1473,7 @@ std::unordered_set<std::string> MainWindow::loadDataFromFile(const FileLoadInfo&
     QString plugin_name =
         QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
                               tr("Select the loader to use:"), names, 0, false, &ok);
-    if (ok && !plugin_name.isEmpty() && _enabled_plugins.contains(plugin_name))
+    if (ok && !plugin_name.isEmpty() && (_enabled_plugins.size() == 0 || _enabled_plugins.contains(plugin_name)))
     {
       dataloader = _data_loader[plugin_name];
       last_plugin_name_used = plugin_name;
@@ -2725,6 +2725,7 @@ void MainWindow::onPlaybackLoop()
   //////////////////
   updatedDisplayTime();
   onUpdateLeftTableValues();
+  updateReactivePlots();
 
   for (auto& it : _state_publisher)
   {
@@ -3243,7 +3244,7 @@ void MainWindow::on_actionPreferences_triggered()
 
   QString theme = settings.value("Preferences::theme").toString();
 
-  if (theme != prev_style)
+  if (!theme.isEmpty() && theme != prev_style)
   {
     loadStyleSheet(tr(":/resources/stylesheet_%1.qss").arg(theme));
   }
