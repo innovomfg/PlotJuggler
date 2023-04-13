@@ -171,6 +171,7 @@ bool RlogMessageParser::parseCanMessage(
   if (dbc_name.empty()) {
     return false;
   }
+
   std::set<uint8_t> updated_busses;
   for(auto elem : listValue) {
     auto value = elem.as<capnp::DynamicStruct>();
@@ -191,7 +192,24 @@ bool RlogMessageParser::parseCanMessage(
           packer->lookup_message(sg.address)->name + '/' + sg.name);
       _data_series.pushBack({time_stamp, (double)sg.value});
     }
+
+    // parser state
+    auto p = parsers[bus];
+    std::vector<std::pair<double, std::string>> parser_state = {
+      {(double)p->can_valid, "can_valid"},
+      {(double)p->bus_timeout, "bus_timeout"},
+      {(double)p->bus_timeout_threshold, "bus_timeout_threshold"},
+      {(double)p->first_sec, "first_sec"},
+      {(double)p->last_sec, "last_sec"},
+      {(double)p->last_sec, "last_nonempty_sec"},
+      {(double)p->can_invalid_cnt, "can_invalid_cnt"},
+    };
+    for (auto k : parser_state) {
+      PJ::PlotData &ds = getSeries(topic_name + '/' + std::to_string(bus) + "/__CANParser/" + k.second);
+      ds.pushBack({time_stamp, k.first});
+    }
   }
+
   return true;
 }
 
