@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <vector>
+
 #include <QDir>
 #include <QString>
 
@@ -178,19 +180,22 @@ bool RlogMessageParser::parseCanMessage(
     uint8_t bus = value.get("src").as<uint8_t>();
     if (parsers.find(bus) == parsers.end()) {
       parsers[bus] = std::make_shared<CANParser>(bus, dbc_name, true, true);
-      parsers[bus]->last_sec = 1;
+      parsers[bus]->first_sec = last_sec;
     }
 
     updated_busses.insert(bus);
+    parsers[bus]->last_sec = last_sec;
     parsers[bus]->UpdateCans(last_sec, value);
+    parsers[bus]->UpdateValid(last_sec);
   }
   for (uint8_t bus : updated_busses) {
-    parsers[bus]->last_sec = last_sec;
-    for (auto& sg : parsers[bus]->query_latest()) {
+    std::vector<SignalValue> signal_values;
+    parsers[bus]->query_latest(signal_values);
+    for (auto& sg : signal_values) {
       // TODO: plot all updated values
       PJ::PlotData& _data_series = getSeries(topic_name + '/' + std::to_string(bus) + '/' +
           packer->lookup_message(sg.address)->name + '/' + sg.name);
-      _data_series.pushBack({time_stamp, (double)sg.value});
+      _data_series.pushBack({time_stamp, (double) sg.value});
     }
 
     // parser state
@@ -201,7 +206,7 @@ bool RlogMessageParser::parseCanMessage(
       {(double)p->bus_timeout_threshold, "bus_timeout_threshold"},
       {(double)p->first_sec, "first_sec"},
       {(double)p->last_sec, "last_sec"},
-      {(double)p->last_sec, "last_nonempty_sec"},
+      {(double)p->last_nonempty_sec, "last_nonempty_sec"},
       {(double)p->can_invalid_cnt, "can_invalid_cnt"},
     };
     for (auto k : parser_state) {
