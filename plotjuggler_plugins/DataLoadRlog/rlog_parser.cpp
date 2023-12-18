@@ -60,12 +60,12 @@ bool RlogMessageParser::parseMessageCereal(capnp::DynamicStruct::Reader event)
     selectDBCDialog();  // prompts for and loads DBC
   }
 
-  uint64_t last_sec = event.get("logMonoTime").as<uint64_t>();
-  double time_stamp = (double)last_sec / 1e9;
-  return parseMessageImpl("", event, time_stamp, last_sec, true);
+  uint64_t last_nanos = event.get("logMonoTime").as<uint64_t>();
+  double time_stamp = (double)last_nanos / 1e9;
+  return parseMessageImpl("", event, time_stamp, last_nanos, true);
 }
 
-bool RlogMessageParser::parseMessageImpl(const std::string& topic_name, capnp::DynamicValue::Reader value, double time_stamp, uint64_t last_sec, bool is_root)
+bool RlogMessageParser::parseMessageImpl(const std::string& topic_name, capnp::DynamicValue::Reader value, double time_stamp, uint64_t last_nanos, bool is_root)
 {
   PJ::PlotData& _data_series = getSeries(topic_name);
 
@@ -99,7 +99,7 @@ bool RlogMessageParser::parseMessageImpl(const std::string& topic_name, capnp::D
     {
       if (topic_name == "/can" || topic_name == "/sendcan")
       {
-        parseCanMessage(topic_name, value.as<capnp::DynamicList>(), time_stamp, last_sec);
+        parseCanMessage(topic_name, value.as<capnp::DynamicList>(), time_stamp, last_nanos);
       }
       else
       {
@@ -107,7 +107,7 @@ bool RlogMessageParser::parseMessageImpl(const std::string& topic_name, capnp::D
         int i = 0;
         for(auto element : value.as<capnp::DynamicList>())
         {
-          parseMessageImpl(topic_name + '/' + std::to_string(i), element, time_stamp, last_sec, false);
+          parseMessageImpl(topic_name + '/' + std::to_string(i), element, time_stamp, last_nanos, false);
           i++;
         }
       }
@@ -147,11 +147,11 @@ bool RlogMessageParser::parseMessageImpl(const std::string& topic_name, capnp::D
 
           if (!is_root || in_union)
           {
-            parseMessageImpl(topic_name + '/' + name, structValue.get(field), time_stamp, last_sec, false);
+            parseMessageImpl(topic_name + '/' + name, structValue.get(field), time_stamp, last_nanos, false);
           }
           else if (is_root && !in_union)
           {
-            parseMessageImpl(topic_name + '/' + structName + "/__" + name, structValue.get(field), time_stamp, last_sec, false);
+            parseMessageImpl(topic_name + '/' + structName + "/__" + name, structValue.get(field), time_stamp, last_nanos, false);
           }
         }
       }
@@ -168,7 +168,7 @@ bool RlogMessageParser::parseMessageImpl(const std::string& topic_name, capnp::D
 }
 
 bool RlogMessageParser::parseCanMessage(
-  const std::string& topic_name, capnp::DynamicList::Reader listValue, double time_stamp, uint64_t last_sec)
+  const std::string& topic_name, capnp::DynamicList::Reader listValue, double time_stamp, uint64_t last_nanos)
 {
   if (dbc_name.empty()) {
     return false;
@@ -180,13 +180,13 @@ bool RlogMessageParser::parseCanMessage(
     uint8_t bus = value.get("src").as<uint8_t>();
     if (parsers.find(bus) == parsers.end()) {
       parsers[bus] = std::make_shared<CANParser>(bus, dbc_name, true, true);
-      parsers[bus]->first_sec = last_sec;
+      parsers[bus]->first_nanos = last_nanos;
     }
 
     updated_busses.insert(bus);
-    parsers[bus]->last_sec = last_sec;
-    parsers[bus]->UpdateCans(last_sec, value);
-    parsers[bus]->UpdateValid(last_sec);
+    parsers[bus]->last_nanos = last_nanos;
+    parsers[bus]->UpdateCans(last_nanos, value);
+    parsers[bus]->UpdateValid(last_nanos);
   }
   for (uint8_t bus : updated_busses) {
     std::vector<SignalValue> signal_values;
@@ -204,9 +204,9 @@ bool RlogMessageParser::parseCanMessage(
       {(double)p->can_valid, "can_valid"},
       {(double)p->bus_timeout, "bus_timeout"},
       {(double)p->bus_timeout_threshold, "bus_timeout_threshold"},
-      {(double)p->first_sec, "first_sec"},
-      {(double)p->last_sec, "last_sec"},
-      {(double)p->last_nonempty_sec, "last_nonempty_sec"},
+      {(double)p->first_nanos, "first_nanos"},
+      {(double)p->last_nanos, "last_nanos"},
+      {(double)p->last_nonempty_nanos, "last_nonempty_nanos"},
       {(double)p->can_invalid_cnt, "can_invalid_cnt"},
     };
     for (auto k : parser_state) {

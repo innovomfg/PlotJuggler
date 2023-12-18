@@ -76,7 +76,7 @@ bool DataStreamCereal::start(QStringList*)
   for (const auto &serv : services)
   {
     SubSocket *socket;
-    socket = SubSocket::create(c, std::string(serv.name), address.toStdString(), false, true);  // don't conflate
+    socket = SubSocket::create(c, std::string(serv.second.name), address.toStdString(), false, true);  // don't conflate
     assert(socket != 0);
 
     poller->registerSocket(socket);
